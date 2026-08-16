@@ -1,0 +1,15 @@
+# Cloudflare Worker 配置
+name = "drift-bottle"
+main = "worker/index.js"
+compatibility_date = "2025-08-16"
+
+# 静态前端资源（npm run build 产出 dist/）
+[assets]
+directory = "dist"
+binding = "ASSETS"
+
+# D1 免费数据库（持久化），database_id 在 `wrangler d1 create` 后填写
+[[d1_databases]]
+binding = "DB"
+database_name = "drift-bottle"
+database_id = "REPLACE_WITH_DATABASE_ID"

@@ -11,64 +11,79 @@
 
 ## 技术栈
 
-- 后端：Node.js + Express
-- 数据库：Node 内置 `node:sqlite`（零依赖、零编译）
-- 前端：React + Vite
-- 生产模式单进程托管 API 与静态页面
+- **线上部署**：Cloudflare Workers（API）+ D1 免费数据库（持久化）+ 静态前端
+- **本地开发**：Node.js + Express + 内置 `node:sqlite`
+- 前端：React + Vite（两套后端共用同一套前端）
 
 ## 本地运行
 
 要求：Node.js ≥ 22.5（内置 `node:sqlite`），推荐 24+
 
 ```bash
-# 1. 安装依赖
 npm install
 
-# 2. 开发模式（后端 3001 + 前端 5173，自动热更新）
+# 开发模式（后端 3001 + 前端 5173，热更新）
 npm run dev
 # 打开 http://localhost:5173
 
-# 3. 生产模式（构建前端，单端口 3001 同时提供页面和 API）
-npm run build
-npm start
-# 打开 http://localhost:3001
+# 生产模式（Express 单端口 3001）
+npm run build && npm start
 ```
 
-数据保存在项目根目录的 `data.db` 文件里。
+本地数据保存在 `data.db`。
 
-## 测试多用户
+## 部署到 Cloudflare（免费、无需绑卡）
 
-用两个浏览器窗口（其中一个用无痕模式）模拟两个匿名用户：
+Cloudflare 免费层：Workers 每天 10 万次请求、D1 数据库 5GB 持久化存储，足够个人使用。
 
-1. 窗口 A 扔一个瓶子
-2. 窗口 B 捞瓶子 → 能看到 A 的内容 → 回复
-3. 窗口 A 打开「我的瓶子」→ 能看到 B 的回复
+**1. 注册 Cloudflare**
+打开 https://dash.cloudflare.com/sign-up ，用邮箱注册（无需信用卡）。
 
-## 部署
+**2. 登录 wrangler（命令行工具）**
 
-这是一个单进程应用，可部署到任意支持 Node.js 的平台。
+```bash
+npm install          # 已含 wrangler
+npx wrangler login   # 会打开浏览器，授权即可
+```
 
-以 [Render](https://render.com)（免费）为例：
+**3. 创建 D1 数据库**
 
-1. 新建 Web Service，关联本项目仓库
-2. Build Command：`npm install && npm run build`
-3. Start Command：`npm start`
-4. 环境变量：`PORT`（平台会自动注入）
+```bash
+npx wrangler d1 create drift-bottle
+```
 
-> 注意：SQLite 数据文件会随容器重建而丢失。要长期保存数据，可把 `DB_PATH` 环境变量指向一个持久化磁盘/卷（例如 Render 的 Disk），或改用远程数据库。
+命令会输出一段 `database_id`（形如 `xxxx-xxxx-...`），把它填到 `wrangler.toml` 里：
+
+```toml
+[[d1_databases]]
+binding = "DB"
+database_name = "drift-bottle"
+database_id = "把这里替换成你的 database_id"
+```
+
+**4. 部署**
+
+```bash
+npm run deploy   # 等价于 npm run build && wrangler deploy
+```
+
+部署成功后会输出你的线上地址，形如：
+```
+https://drift-bottle.<你的子域名>.workers.dev
+```
+
+浏览器打开即可使用，把链接发给朋友。
 
 ## 目录结构
 
 ```
 drift-bottle/
+  worker/
+    index.js    # Cloudflare Worker：API + D1（线上部署）
   server/
-    index.js   # Express：API + 生产时托管 dist/
-    db.js      # node:sqlite 建表与查询
-  src/
-    App.jsx    # 主界面 + 三个视图
-    api.js     # fetch 封装
-    styles.css # 海洋主题样式
-    main.jsx   # 入口
-  index.html
+    index.js    # Express：API + SQLite（本地开发）
+    db.js
+  src/          # React 前端（两套后端共用）
+  wrangler.toml # Cloudflare 部署配置
   vite.config.js
 ```
