@@ -12,4 +12,4 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "drift-bottle"
-database_id = "REPLACE_WITH_DATABASE_ID"
+database_id = "5a8eb76b-1f24-4583-9d1d-87754bef72d1"

@@ -72,7 +72,8 @@ async function handleApi(request, env, url) {
 
     return json({ error: 'Not Found' }, 404)
   } catch (err) {
-    return json({ error: '服务器错误' }, 500)
+    console.error('API error:', err)
+    return json({ error: '服务器错误', detail: String((err && err.message) || err) }, 500)
   }
 }
 
@@ -80,28 +81,31 @@ async function handleApi(request, env, url) {
 let initialized = false
 async function ensureTables(env) {
   if (initialized) return
-  await env.DB.exec(`
-    CREATE TABLE IF NOT EXISTS bottles (
+  const tables = [
+    `CREATE TABLE IF NOT EXISTS bottles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       content TEXT NOT NULL,
       author_id TEXT NOT NULL,
       created_at TEXT NOT NULL,
       reply_count INTEGER NOT NULL DEFAULT 0
-    );
-    CREATE TABLE IF NOT EXISTS replies (
+    )`,
+    `CREATE TABLE IF NOT EXISTS replies (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       bottle_id INTEGER NOT NULL,
       content TEXT NOT NULL,
       author_id TEXT NOT NULL,
       created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS picks (
+    )`,
+    `CREATE TABLE IF NOT EXISTS picks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       bottle_id INTEGER NOT NULL,
       picker_id TEXT NOT NULL,
       created_at TEXT NOT NULL
-    );
-  `)
+    )`
+  ]
+  for (const sql of tables) {
+    await env.DB.prepare(sql).run()
+  }
   initialized = true
 }
 
